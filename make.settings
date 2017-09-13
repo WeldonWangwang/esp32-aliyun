@@ -1,0 +1,16 @@
+BUILD_TYPE                  = debug
+
+PLATFORM_CC                 = gcc
+PLATFORM_AR                 = ar
+PLATFORM_OS                 = linux
+
+#
+# Uncomment below and specify PATH to your toolchain when cross-compile SDK
+#
+# PLATFORM_CC = /path/to/your/cross/gcc
+# PLATFORM_AR = /path/to/your/cross/ar
+
+FEATURE_MQTT_COMM_ENABLED   = y
+FEATURE_MQTT_DIRECT         = n
+FEATURE_MQTT_DIRECT_NOTLS   = n
+FEATURE_COAP_COMM_ENABLED   = y
