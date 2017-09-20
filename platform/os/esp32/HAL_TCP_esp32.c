@@ -16,42 +16,44 @@
  *
  */
 
-
-
 #include <stdio.h>
 #include <string.h>
+#include "esp_log.h"
+#include "esp_system.h"
+#include "esp_event.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
 
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <netinet/tcp.h>
-#include <netdb.h>
+
+
+
+// #include <errno.h>
+// #include <sys/types.h>
+// #include <sys/socket.h>
+// #include <sys/time.h>
+// #include <unistd.h>
+// #include <fcntl.h>
+// #include <netinet/tcp.h>
+// #include <netdb.h>
 
 #include "iot_import.h"
 
-#define PLATFORM_LINUXSOCK_LOG(format, ...) \
-    do { \
-        printf("LINUXSOCK %u %s() | "format"\n", __LINE__, __FUNCTION__, ##__VA_ARGS__);\
-        fflush(stdout);\
-    }while(0);
+#define TAG  "MQTT"
 
-
-static uint64_t _linux_get_time_ms(void)
+static uint64_t _esp32_get_time_ms(void)
 {
     struct timeval tv = { 0 };
     uint64_t time_ms;
 
-    gettimeofday(&tv, NULL);
+    mygettimeofday(&tv, NULL);
 
     time_ms = tv.tv_sec * 1000 + tv.tv_usec / 1000;
 
     return time_ms;
 }
 
-static uint64_t _linux_time_left(uint64_t t_end, uint64_t t_now)
+static uint64_t _esp32_time_left(uint64_t t_end, uint64_t t_now)
 {
     uint64_t t_left;
 
@@ -75,7 +77,7 @@ uintptr_t HAL_TCP_Establish(const char *host, uint16_t port)
 
     memset(&hints, 0, sizeof(hints));
 
-    PLATFORM_LINUXSOCK_LOG("establish tcp connection with server(host=%s port=%u)", host, port);
+    ESP_LOGI(TAG, "establish tcp connection with server(host=%s port=%u)", host, port);
 
     hints.ai_family = AF_INET; //only IPv4
     hints.ai_socktype = SOCK_STREAM;
@@ -83,20 +85,20 @@ uintptr_t HAL_TCP_Establish(const char *host, uint16_t port)
     sprintf(service, "%u", port);
 
     if ((rc = getaddrinfo(host, service, &hints, &addrInfoList)) != 0) {
-        perror("getaddrinfo error");
+        ESP_LOGE(TAG, "getaddrinfo error");
         return 0;
     }
 
     for (cur = addrInfoList; cur != NULL; cur = cur->ai_next) {
         if (cur->ai_family != AF_INET) {
-            perror("socket type error");
+            ESP_LOGE(TAG, "socket type error");
             rc = 0;
             continue;
         }
 
         fd = socket(cur->ai_family, cur->ai_socktype, cur->ai_protocol);
         if (fd < 0) {
-            perror("create socket error");
+            ESP_LOGE(TAG, "create socket error");
             rc = 0;
             continue;
         }
@@ -107,14 +109,14 @@ uintptr_t HAL_TCP_Establish(const char *host, uint16_t port)
         }
 
         close(fd);
-        perror("connect error");
+        ESP_LOGE(TAG, "connect error");
         rc = 0;
     }
 
     if (0 == rc) {
-        PLATFORM_LINUXSOCK_LOG("fail to establish tcp");
+        ESP_LOGI(TAG, "fail to establish tcp");
     } else {
-        PLATFORM_LINUXSOCK_LOG("success to establish tcp, fd=%d", rc);
+        ESP_LOGI(TAG, "success to establish tcp, fd=%d", rc);
     }
     freeaddrinfo(addrInfoList);
 
@@ -129,13 +131,13 @@ int HAL_TCP_Destroy(uintptr_t fd)
     //Shutdown both send and receive operations.
     rc = shutdown((int) fd, 2);
     if (0 != rc) {
-        perror("shutdown error");
+        ESP_LOGE(TAG, "shutdown error");
         return -1;
     }
 
     rc = close((int) fd);
     if (0 != rc) {
-        perror("closesocket error");
+        ESP_LOGE(TAG, "closesocket error");
         return -1;
     }
 
@@ -150,12 +152,12 @@ int32_t HAL_TCP_Write(uintptr_t fd, const char *buf, uint32_t len, uint32_t time
     uint64_t t_end, t_left;
     fd_set sets;
 
-    t_end = _linux_get_time_ms() + timeout_ms;
+    t_end = _esp32_get_time_ms() + timeout_ms;
     len_sent = 0;
     ret = 1; //send one time if timeout_ms is value 0
 
     do {
-        t_left = _linux_time_left(t_end, _linux_get_time_ms());
+        t_left = _esp32_time_left(t_end, _esp32_get_time_ms());
 
         if (0 != t_left) {
             struct timeval timeout;
@@ -169,21 +171,21 @@ int32_t HAL_TCP_Write(uintptr_t fd, const char *buf, uint32_t len, uint32_t time
             ret = select(fd + 1, NULL, &sets, NULL, &timeout);
             if (ret > 0) {
                 if (0 == FD_ISSET(fd, &sets)) {
-                    PLATFORM_LINUXSOCK_LOG("Should NOT arrive");
+                    ESP_LOGI(TAG, "Should NOT arrive");
                     //If timeout in next loop, it will not sent any data
                     ret = 0;
                     continue;
                 }
             } else if (0 == ret) {
-                PLATFORM_LINUXSOCK_LOG("select-write timeout %d", (int)fd);
+                ESP_LOGI(TAG,"select-write timeout %d", (int)fd);
                 break;
             } else {
                 if (EINTR == errno) {
-                    PLATFORM_LINUXSOCK_LOG("EINTR be caught");
+                    ESP_LOGI(TAG,"EINTR be caught");
                     continue;
                 }
 
-                perror("select-write fail");
+                ESP_LOGE(TAG,"select-write fail");
                 break;
             }
         }
@@ -193,18 +195,18 @@ int32_t HAL_TCP_Write(uintptr_t fd, const char *buf, uint32_t len, uint32_t time
             if (ret > 0) {
                 len_sent += ret;
             } else if (0 == ret) {
-                PLATFORM_LINUXSOCK_LOG("No data be sent");
+                ESP_LOGI(TAG,"No data be sent");
             } else {
                 if (EINTR == errno) {
-                    PLATFORM_LINUXSOCK_LOG("EINTR be caught");
+                    ESP_LOGI(TAG,"EINTR be caught");
                     continue;
                 }
 
-                perror("send fail");
+                ESP_LOGE(TAG,"send fail");
                 break;
             }
         }
-    } while ((len_sent < len) && (_linux_time_left(t_end, _linux_get_time_ms()) > 0));
+    } while ((len_sent < len) && (_esp32_time_left(t_end, _esp32_get_time_ms()) > 0));
 
     return len_sent;
 }
@@ -218,12 +220,12 @@ int32_t HAL_TCP_Read(uintptr_t fd, char *buf, uint32_t len, uint32_t timeout_ms)
     fd_set sets;
     struct timeval timeout;
 
-    t_end = _linux_get_time_ms() + timeout_ms;
+    t_end = _esp32_get_time_ms() + timeout_ms;
     len_recv = 0;
     err_code = 0;
 
     do {
-        t_left = _linux_time_left(t_end, _linux_get_time_ms());
+        t_left = _esp32_time_left(t_end, _esp32_get_time_ms());
         if (0 == t_left) {
             break;
         }
@@ -239,22 +241,22 @@ int32_t HAL_TCP_Read(uintptr_t fd, char *buf, uint32_t len, uint32_t timeout_ms)
             if (ret > 0) {
                 len_recv += ret;
             } else if (0 == ret) {
-                perror("connection is closed");
+                ESP_LOGE(TAG,"connection is closed");
                 err_code = -1;
                 break;
             } else {
                 if (EINTR == errno) {
-                    PLATFORM_LINUXSOCK_LOG("EINTR be caught");
+                    ESP_LOGI(TAG,"EINTR be caught");
                     continue;
                 }
-                perror("send fail");
+                ESP_LOGE(TAG,"send fail");
                 err_code = -2;
                 break;
             }
         } else if (0 == ret) {
             break;
         } else {
-            perror("select-recv fail");
+            ESP_LOGE(TAG,"select-recv fail");
             err_code = -2;
             break;
         }

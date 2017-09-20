@@ -18,7 +18,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <memory.h>
 #include <stdlib.h>
 #include <string.h>
 #include "mbedtls/error.h"
@@ -28,6 +27,7 @@
 #include "mbedtls/pk.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/platform.h"
+
 
 #include "iot_import.h"
 

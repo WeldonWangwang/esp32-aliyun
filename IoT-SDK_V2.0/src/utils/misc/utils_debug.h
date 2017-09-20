@@ -23,7 +23,7 @@
 
 #include "lite-log.h"
 
-#ifdef IOTX_DEBUG
+//#ifdef IOTX_DEBUG
 
 #define DEBUG_PUTS(fmt, args ...) \
     do{ \
@@ -58,7 +58,7 @@
 
 #define TRACE(fmt, args...) do{ }while(0)
 
-#endif
+//#endif
 
 
 #endif /* _IOTX_COMMON_DEBUG_H_ */

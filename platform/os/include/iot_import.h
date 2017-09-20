@@ -29,7 +29,6 @@ extern "C" {
 #include <stdlib.h>
 #include <stdbool.h>
 #include <inttypes.h>
-
 /** @defgroup group_platform platform
  *  @{
  */
@@ -51,6 +50,8 @@ extern "C" {
  * @see None.
  * @note None.
  */
+void mygettimeofday(struct timeval *tv, void *tz);
+
 void *HAL_MutexCreate(void);
 
 
