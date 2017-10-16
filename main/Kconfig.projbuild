@@ -1,0 +1,17 @@
+menu "Demo Configuration"
+
+config WIFI_SSID
+    string "WiFi SSID"
+	default "wifi-11"
+	help
+		SSID (network name) to connect to.
+
+config WIFI_PASSWORD
+    string "WiFi Password"
+	default "sumof1+1=2"
+	help
+		WiFi password (WPA or WPA2) to use.
+
+		Can be left blank if the network has no security set.
+
+endmenu
