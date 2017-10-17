@@ -16,15 +16,15 @@
 #define TAG "MQTT"
 #define MQTT_DIRECT
 
-#define PRODUCT_KEY             "9AhUIZuwEiy"
-#define DEVICE_NAME             "esp32_01"
-#define DEVICE_SECRET           "9kbkZ3FILoGewsnva6HdGRz28aJgFCPQ"
+#define PRODUCT_KEY             "********************************"
+#define DEVICE_NAME             "********************************"
+#define DEVICE_SECRET           "********************************"
 
 // These are pre-defined topics
-#define TOPIC_UPDATE            "/"PRODUCT_KEY"/"DEVICE_NAME"/update"
-#define TOPIC_ERROR             "/"PRODUCT_KEY"/"DEVICE_NAME"/update/error"
-#define TOPIC_GET               "/"PRODUCT_KEY"/"DEVICE_NAME"/get"
-#define TOPIC_DATA              "/"PRODUCT_KEY"/"DEVICE_NAME"/data"
+#define TOPIC_UPDATE            "********************************"
+#define TOPIC_ERROR             "********************************"
+#define TOPIC_GET               "********************************"
+#define TOPIC_DATA              "********************************"
 
 #define MSG_LEN_MAX             (1024)
 
