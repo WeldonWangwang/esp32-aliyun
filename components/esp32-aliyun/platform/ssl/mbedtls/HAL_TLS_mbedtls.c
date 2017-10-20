@@ -221,9 +221,11 @@ int utils_network_ssl_read(TLSDataParams_t *pTlsData, char *buffer, int len, int
     int             ret = -1;
     char            err_str[33];
 
+
     mbedtls_ssl_conf_read_timeout(&(pTlsData->conf), timeout_ms);
     while (readLen < len) {
         ret = mbedtls_ssl_read(&(pTlsData->ssl), (unsigned char *)(buffer + readLen), (len - readLen));
+        printf("```````````````````````````````````````````````ret = %d\n", ret);
         if (ret > 0) {
             readLen += ret;
             net_status = 0;
@@ -234,6 +236,7 @@ int utils_network_ssl_read(TLSDataParams_t *pTlsData, char *buffer, int len, int
             if (MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY == ret) {
                 mbedtls_strerror(ret, err_str, sizeof(err_str));
                 SSL_LOG("ssl recv error: code = %d, err_str = '%s'", ret, err_str);
+                printf("fffffffffffffffffffffffffffffffffffffffffffffff\n");
                 net_status = -2; // connection is closed
                 break;
             } else if ((MBEDTLS_ERR_SSL_TIMEOUT == ret)
@@ -247,7 +250,9 @@ int utils_network_ssl_read(TLSDataParams_t *pTlsData, char *buffer, int len, int
             } else {
                 mbedtls_strerror(ret, err_str, sizeof(err_str));
                 SSL_LOG("ssl recv error: code = %d, err_str = '%s'", ret, err_str);
+                printf("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj\n");
                 net_status = -1;
+
                 return -1; // Connection error
             }
         }
@@ -288,8 +293,10 @@ void utils_network_ssl_disconnect(TLSDataParams_t *pTlsData)
     mbedtls_x509_crt_free(&(pTlsData->cacertl));
     if ((pTlsData->pkey).pk_info != NULL) {
         SSL_LOG("need free client crt&key");
+#if defined(MBEDTLS_CERTS_C)
         mbedtls_x509_crt_free(&(pTlsData->clicert));
         mbedtls_pk_free(&(pTlsData->pkey));
+#endif
     }
 #endif
     mbedtls_ssl_free(&(pTlsData->ssl));

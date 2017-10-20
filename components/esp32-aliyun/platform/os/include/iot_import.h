@@ -16,8 +16,6 @@
  *
  */
 
-
-
 #ifndef __IOT_IMPORT_H__
 #define __IOT_IMPORT_H__
 #if defined(__cplusplus)
@@ -29,6 +27,7 @@ extern "C" {
 #include <stdlib.h>
 #include <stdbool.h>
 #include <inttypes.h>
+
 /** @defgroup group_platform platform
  *  @{
  */
@@ -36,9 +35,8 @@ extern "C" {
 #define _IN_            /**< indicate that this is an input parameter. */
 #define _OU_            /**< indicate that this is an output parameter. */
 
-
 /*********************************** mutex interface ***********************************/
-
+void mygettimeofday(struct timeval *tv, void *tz);
 /** @defgroup group_platform_mutex mutex
  *  @{
  */
@@ -50,14 +48,12 @@ extern "C" {
  * @see None.
  * @note None.
  */
-void mygettimeofday(struct timeval *tv, void *tz);
-
 void *HAL_MutexCreate(void);
 
 
 
 /**
- * @brief Destroy the specified mutex object, it will free related resource.
+ * @brief Destroy the specified mutex object, it will release related resource.
  *
  * @param [in] mutex @n The specified mutex.
  * @return None.
@@ -91,7 +87,7 @@ void HAL_MutexLock(_IN_ void *mutex);
 void HAL_MutexUnlock(_IN_ void *mutex);
 
 
-/** @} */ //end of platform_mutex
+/** @} */ /* end of platform_mutex */
 
 
 /** @defgroup group_platform_memory_manage memory
@@ -120,7 +116,7 @@ void *HAL_Malloc(_IN_ uint32_t size);
 void HAL_Free(_IN_ void *ptr);
 
 
-/** @} */ //end of platform_memory_manage
+/** @} */ /* end of platform_memory_manage */
 
 /** @defgroup group_platform_other other
  *  @{
@@ -160,6 +156,19 @@ void HAL_SleepMs(_IN_ uint32_t ms);
  */
 void HAL_Printf(_IN_ const char *fmt, ...);
 
+/**
+ * @brief Writes formatted data to string.
+ *
+ * @param [in] str: @n String that holds written text.
+ * @param [in] len: @n Maximum length of character will be written
+ * @param [in] fmt: @n Format that contains the text to be written, it can optionally contain embedded format specifiers
+     that specifies how subsequent arguments are converted for output.
+ * @param [in] ...: @n the variable argument list, for formatted and inserted in the resulting string replacing their respective specifiers.
+ * @return bytes of character successfully written into string.
+ * @see None.
+ * @note None.
+ */
+int HAL_Snprintf(_IN_ char *str, const int len, const char *fmt, ...);
 
 /**
  * @brief Get vendor ID of hardware module.
@@ -169,7 +178,7 @@ void HAL_Printf(_IN_ const char *fmt, ...);
 char *HAL_GetPartnerID(char pid_str[]);
 
 
-/** @} */ //end of group_platform_other
+/** @} */ /* end of group_platform_other */
 
 /**
  * @brief Establish a TCP connection.

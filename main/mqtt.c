@@ -14,18 +14,29 @@
 #include "iot_export.h"
 
 #define TAG "MQTT"
-#define MQTT_DIRECT
 
-#define PRODUCT_KEY             "********************************"
-#define DEVICE_NAME             "********************************"
-#define DEVICE_SECRET           "********************************"
+#if defined(MQTT_ID2_AUTH) && defined(TEST_ID2_DAILY)
+#define PRODUCT_KEY             "9AhUIZuwEiy"
+#define DEVICE_NAME             "esp32_02"
+#define DEVICE_SECRET           "IZSWGUeX6B7Nbbr0wJxydYzfZI7ciA7Y"
+#elif defined(MQTT_ID2_AUTH)
+#define PRODUCT_KEY             "9AhUIZuwEiy"
+#define DEVICE_NAME             "esp32_02"
+#define DEVICE_SECRET           "IZSWGUeX6B7Nbbr0wJxydYzfZI7ciA7Y"
+#else
+#define PRODUCT_KEY             "9AhUIZuwEiy"
+#define DEVICE_NAME             "esp32_02"
+#define DEVICE_SECRET           "IZSWGUeX6B7Nbbr0wJxydYzfZI7ciA7Y"
 
-// These are pre-defined topics
-#define TOPIC_UPDATE            "********************************"
-#define TOPIC_ERROR             "********************************"
-#define TOPIC_GET               "********************************"
-#define TOPIC_DATA              "********************************"
+#endif
 
+/* These are pre-defined topics */
+#define TOPIC_UPDATE            "/"PRODUCT_KEY"/"DEVICE_NAME"/update"
+#define TOPIC_ERROR             "/"PRODUCT_KEY"/"DEVICE_NAME"/update/error"
+#define TOPIC_GET               "/"PRODUCT_KEY"/"DEVICE_NAME"/get"
+#define TOPIC_DATA              "/"PRODUCT_KEY"/"DEVICE_NAME"/data"
+
+#define IOTX_DEBUG
 #define MSG_LEN_MAX             (1024)
 
 #define EXAMPLE_TRACE(fmt, args...)  \
@@ -107,7 +118,7 @@ static void _demo_message_arrive(void *pcontext, void *pclient, iotx_mqtt_event_
 {
     iotx_mqtt_topic_info_pt ptopic_info = (iotx_mqtt_topic_info_pt) msg->msg;
 
-    // print topic name and topic message
+    /* print topic name and topic message */
     EXAMPLE_TRACE("----");
     EXAMPLE_TRACE("Topic: '%.*s' (Length: %d)",
                   ptopic_info->topic_len,
@@ -161,7 +172,7 @@ int mqtt_client(void)
 
     mqtt_params.request_timeout_ms = 2000;
     mqtt_params.clean_session = 0;
-    mqtt_params.keepalive_interval_ms = 600000;
+    mqtt_params.keepalive_interval_ms = 6000;
     mqtt_params.pread_buf = msg_readbuf;
     mqtt_params.read_buf_size = MSG_LEN_MAX;
     mqtt_params.pwrite_buf = msg_buf;
@@ -205,7 +216,139 @@ int mqtt_client(void)
 
     while (1) {
 
+        uint32_t w;
+        w = esp_get_free_heap_size();
+        printf("\n************************     %d     **********************\n", w);
         /* Generate topic message */
+
+        msg_len = snprintf(msg_pub, sizeof(msg_pub), "{\"attr_name\":\"temperature\", \"attr_value\":\"%d\"}", cnt);
+        if (msg_len < 0) {
+            
+            EXAMPLE_TRACE("Error occur! Exit program");
+            rc = -1;
+            break;
+        }
+
+        topic_msg.payload = (void *)msg_pub;
+        topic_msg.payload_len = msg_len;
+
+        rc = IOT_MQTT_Publish(pclient, TOPIC_DATA, &topic_msg);
+        if (rc < 0) {
+            EXAMPLE_TRACE("error occur when publish");
+            rc = -1;
+            break;
+        }
+
+//        HAL_SleepMs(200);
+        /* handle the MQTT packet received from TCP or SSL connection */
+        IOT_MQTT_Yield(pclient, 200);
+        HAL_SleepMs(2000);
+    }
+
+    IOT_MQTT_Unsubscribe(pclient, TOPIC_DATA);
+    
+    HAL_SleepMs(2000);
+
+    IOT_MQTT_Destroy(&pclient);
+
+do_exit:
+    if (NULL != msg_buf) {
+        HAL_Free(msg_buf);
+    }
+
+    if (NULL != msg_readbuf) {
+        HAL_Free(msg_readbuf);
+    }
+
+    return rc;
+}
+
+#ifdef MQTT_ID2_AUTH
+int mqtt_client_secure()
+{
+    int rc = 0, msg_len, cnt = 0;
+    void *pclient;
+    iotx_conn_info_pt pconn_info;
+    iotx_mqtt_param_t mqtt_params;
+    iotx_mqtt_topic_info_t topic_msg;
+    char msg_pub[128];
+    char *msg_buf = NULL, *msg_readbuf = NULL;
+
+    if (NULL == (msg_buf = (char *)HAL_Malloc(MSG_LEN_MAX))) {
+        EXAMPLE_TRACE("not enough memory");
+        rc = -1;
+        goto do_exit;
+    }
+
+    if (NULL == (msg_readbuf = (char *)HAL_Malloc(MSG_LEN_MAX))) {
+        EXAMPLE_TRACE("not enough memory");
+        rc = -1;
+        goto do_exit;
+    }
+
+    /* Device AUTH */
+    rc = IOT_SetupConnInfoSecure(PRODUCT_KEY, DEVICE_NAME, DEVICE_SECRET, (void **)&pconn_info);
+    if (rc != 0) {
+        EXAMPLE_TRACE("AUTH request failed!");
+        goto do_exit;
+    }
+
+    /* Initialize MQTT parameter */
+    memset(&mqtt_params, 0x0, sizeof(mqtt_params));
+
+    mqtt_params.port = pconn_info->port;
+    mqtt_params.host = pconn_info->host_name;
+    mqtt_params.client_id = pconn_info->client_id;
+    mqtt_params.username = pconn_info->username;
+    mqtt_params.password = pconn_info->password;
+    mqtt_params.pub_key = pconn_info->pub_key;
+
+    mqtt_params.request_timeout_ms = 2000;
+    mqtt_params.clean_session = 0;
+    mqtt_params.keepalive_interval_ms = 60000;
+    mqtt_params.pread_buf = msg_readbuf;
+    mqtt_params.read_buf_size = MSG_LEN_MAX;
+    mqtt_params.pwrite_buf = msg_buf;
+    mqtt_params.write_buf_size = MSG_LEN_MAX;
+
+    mqtt_params.handle_event.h_fp = event_handle;
+    mqtt_params.handle_event.pcontext = NULL;
+
+    /* Construct a MQTT client with specify parameter */
+    pclient = IOT_MQTT_ConstructSecure(&mqtt_params);
+    if (NULL == pclient) {
+        EXAMPLE_TRACE("MQTT construct failed");
+        rc = -1;
+        goto do_exit;
+    }
+
+    /* Subscribe the specific topic */
+    rc = IOT_MQTT_Subscribe(pclient, TOPIC_DATA, IOTX_MQTT_QOS1, _demo_message_arrive, NULL);
+    if (rc < 0) {
+        IOT_MQTT_Destroy(&pclient);
+        EXAMPLE_TRACE("IOT_MQTT_Subscribe() failed, rc = %d", rc);
+        rc = -1;
+        goto do_exit;
+    }
+
+    HAL_SleepMs(1000);
+
+    /* Initialize topic information */
+    memset(&topic_msg, 0x0, sizeof(iotx_mqtt_topic_info_t));
+    strcpy(msg_pub, "message: hello! start!");
+
+    topic_msg.qos = IOTX_MQTT_QOS1;
+    topic_msg.retain = 0;
+    topic_msg.dup = 0;
+    topic_msg.payload = (void *)msg_pub;
+    topic_msg.payload_len = strlen(msg_pub);
+
+    rc = IOT_MQTT_Publish(pclient, TOPIC_DATA, &topic_msg);
+    EXAMPLE_TRACE("rc = IOT_MQTT_Publish() = %d", rc);
+
+    while (1) {
+        /* Generate topic message */
+        cnt++;
         msg_len = snprintf(msg_pub, sizeof(msg_pub), "{\"attr_name\":\"temperature\", \"attr_value\":\"%d\"}", cnt);
         if (msg_len < 0) {
             EXAMPLE_TRACE("Error occur! Exit program");
@@ -222,26 +365,25 @@ int mqtt_client(void)
             rc = -1;
             break;
         }
-#ifdef MQTT_ID2_CRYPTO
         EXAMPLE_TRACE("packet-id=%u, publish topic msg='0x%02x%02x%02x%02x'...",
                       (uint32_t)rc,
                       msg_pub[0], msg_pub[1], msg_pub[2], msg_pub[3]
                      );
-#else
-        EXAMPLE_TRACE("packet-id=%u, publish topic msg=%s", (uint32_t)rc, msg_pub);
-#endif
 
         /* handle the MQTT packet received from TCP or SSL connection */
         IOT_MQTT_Yield(pclient, 200);
 
-        HAL_SleepMs(2000);
+        /* infinite loop if running with 'loop' argument */
+
+        HAL_SleepMs(1000);
+
 
     }
 
     IOT_MQTT_Unsubscribe(pclient, TOPIC_DATA);
 
     HAL_SleepMs(200);
-
+    IOT_CloseLog();
     IOT_MQTT_Destroy(&pclient);
 
 do_exit:
@@ -254,16 +396,26 @@ do_exit:
     }
 
     return rc;
+
 }
+#endif
+
 
 void mqtt_proc(void)
 {
     ESP_LOGI(TAG, "MQTT client example begin");
-    mqtt_client();
+#ifndef MQTT_ID2_AUTH
+   mqtt_client();
+#else
+    printf("--------------------------------------------------\n");
+    mqtt_client_secure();
+#endif
     ESP_LOGI(TAG, "MQTT client example end");
     while (1) {
+        mqtt_client();
     }
 }
+
 
 esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -276,7 +428,7 @@ esp_err_t event_handler(void *ctx, system_event_t *event)
 
     case SYSTEM_EVENT_STA_GOT_IP:
         ESP_LOGI(TAG, "Connected.");
-        xTaskCreate(mqtt_proc, "mqttex", 4096 * 3, NULL, 1, NULL);
+        xTaskCreate(mqtt_proc, "mqttex", 4096 * 4, NULL, 1, NULL);
         break;
 
     case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -314,5 +466,9 @@ void app_main(void)
 {
     IOT_OpenLog("mqtt");
     IOT_SetLogLevel(IOT_LOG_DEBUG);
-    initialize_wifi();
+
+    IOT_DumpMemoryStats(IOT_LOG_DEBUG);
+
+    initialize_wifi();   
+//   EXAMPLE_TRACE("out of sample!");
 }
