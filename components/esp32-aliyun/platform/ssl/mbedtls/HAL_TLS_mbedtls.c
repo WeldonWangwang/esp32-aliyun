@@ -225,7 +225,7 @@ int utils_network_ssl_read(TLSDataParams_t *pTlsData, char *buffer, int len, int
     mbedtls_ssl_conf_read_timeout(&(pTlsData->conf), timeout_ms);
     while (readLen < len) {
         ret = mbedtls_ssl_read(&(pTlsData->ssl), (unsigned char *)(buffer + readLen), (len - readLen));
-        printf("```````````````````````````````````````````````ret = %d\n", ret);
+        printf("~~~~~~~~~~~~~~~~~~~~~~~~ ret = %d ~~~~~~~~~~~~~~~~~~~~~~~~\n", ret);
         if (ret > 0) {
             readLen += ret;
             net_status = 0;
@@ -236,7 +236,6 @@ int utils_network_ssl_read(TLSDataParams_t *pTlsData, char *buffer, int len, int
             if (MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY == ret) {
                 mbedtls_strerror(ret, err_str, sizeof(err_str));
                 SSL_LOG("ssl recv error: code = %d, err_str = '%s'", ret, err_str);
-                printf("fffffffffffffffffffffffffffffffffffffffffffffff\n");
                 net_status = -2; // connection is closed
                 break;
             } else if ((MBEDTLS_ERR_SSL_TIMEOUT == ret)
@@ -250,7 +249,6 @@ int utils_network_ssl_read(TLSDataParams_t *pTlsData, char *buffer, int len, int
             } else {
                 mbedtls_strerror(ret, err_str, sizeof(err_str));
                 SSL_LOG("ssl recv error: code = %d, err_str = '%s'", ret, err_str);
-                printf("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj\n");
                 net_status = -1;
 
                 return -1; // Connection error

@@ -1,35 +1,30 @@
-# esp32-aliyun  
+﻿# esp32-aliyun  
 
 ## 1. 阿里云物联网套件简介
 
-![](pictures/framework.png)  
+![](https://i.imgur.com/OqjGiQL.png)
 
-阿里云物联网套件包括以下一部分：  
+阿里云物联网套件包括以下部分：  
 
-- IoT Hub  
+> - IoT Hub  
 
-  为设备和物联网应用程序提供发布和接收消息的安全通道。IoT Hub 目前支持 CoAP 协议和 MQTT 协议：
-  
-  - 设备可以基于 CoAP 协议与 IoT HUb 短连接通信，应用设备低功耗场景。
+>  为设备和物联网应用程序提供发布和接收消息的安全通道。IoT Hub 目前支持 CoAP 协议和 MQTT 协议：
+ >  - 设备可以基于 CoAP 协议与 IoT HUb 短连接通信，应用设备低功耗场景。
   - 设备也可以基于 MQTT 协议与 IoT Hub 长连接通信，应用指令实时响应的场景。  
   
- 详情请参考 [IoT Hub](https://help.aliyun.com/document_detail/30548.html?spm=5176.doc30523.2.1.WtHk0t)
+>   详情请参考 [IoT Hub](https://help.aliyun.com/document_detail/30548.html?spm=5176.doc30523.2.1.WtHk0t)
 
-- 安全认证&权限策略
+> - 安全认证&权限策略
+> - 规则引擎
+> - 设备影子
 
- 物联网套件为每个设备颁发唯一的证书，依赖证书才能连接 IoT Hub。提供设备级的授权粒度，任何设备只能对自己所属的 Topic 发布订阅消息，服务端凭借阿里云 AK 对账号下所属的 Topic 进行操作，如果想要操作其他账号下的 Topic，必须要需要经过授权才可以操作。
+ESP32_aliyun_IoT-SDK 移植下载:  
 
- 详情请参考[身份和安全](https://help.aliyun.com/document_detail/30552.html?spm=5176.doc30523.2.2.WtHk0t)
-
-- 规则引擎
-
- 为用户提供类 SQL 语言的规则引擎，帮助用户过滤数据、处理数据，并能够发送数据到阿里云其他服务，例如 Table Store，MNS，DataHub等等，也能够发送到数据到其他 Topic。
- 
-- 设备影子
-
- 设备影子是一个 JSON 文档，用于存储设备或者应用的当前状态信息。每个设备都会在云端有唯一的设备影子对应，您可以使用设备影子通过 MQTT 或 HTTP 获取和设置设备的状态，无论该设备是否连接到 Internet。
+    git clone --recursive https://wang3@gitlab.espressif.cn:6688/cloud/esp32-aliyun.git  
+    git submodule update --init --recursive
 
 ## 2. framework  
+
 ```
 .
 ├── build                                   //存放编译后生成的文件
@@ -71,7 +66,19 @@
 
 ## 5. 配置  
 
-#### ESP32 Wi-Fi 联网配置   
+#### IoT-SDK 改动适配  
+
+- 为了提高在 WiFi 连接下传输的稳定性，需要做以下改动：  
+
+    将 `IoT-SDK/src/mqtt/mqtt_client.h` 中 `#define IOTX_MC_REPUB_NUM_MAX                   (20)` 改为 `#define IOTX_MC_REPUB_NUM_MAX                   (100)`
+    
+    将`IoT-SDK/src/security.h` 中 `#include "tfs/tfs.h"` 改为 `#include "tfs.h"`  
+
+- demo 选择：  
+在 `esp32-aliyun` 中有不同的 demo 可以选择编译，默认为 `mqtt-example`;
+在 `esp32-aliyun` 中 `main` 文件夹下有不同的 demo，选择对所需的 demo 中 `app_main` 对应的注释即可。
+
+#### ESP32 Wi-Fi 联网配置  
 
 运行 `make menuconfig -> Demo Configuration -> 输入热点的 Wi-Fi SSID & Wi-Fi Password`
 

@@ -34,7 +34,7 @@ extern "C" {
 
 #define _IN_            /**< indicate that this is an input parameter. */
 #define _OU_            /**< indicate that this is an output parameter. */
-
+struct timeval *t;
 /*********************************** mutex interface ***********************************/
 void mygettimeofday(struct timeval *tv, void *tz);
 /** @defgroup group_platform_mutex mutex

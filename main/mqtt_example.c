@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_wifi.h"
 #include "esp_system.h"
 #include "esp_event.h"
@@ -401,7 +402,7 @@ do_exit:
 #endif
 
 
-void mqtt_proc(void)
+void mqtt_proc(void *pvParameter)
 {
     ESP_LOGI(TAG, "MQTT client example begin");
 #ifndef MQTT_ID2_AUTH
@@ -428,7 +429,7 @@ esp_err_t event_handler(void *ctx, system_event_t *event)
 
     case SYSTEM_EVENT_STA_GOT_IP:
         ESP_LOGI(TAG, "Connected.");
-        xTaskCreate(mqtt_proc, "mqttex", 4096 * 4, NULL, 1, NULL);
+        xTaskCreate(&mqtt_proc, "mqtt_proc", 4096 * 4, NULL, 2, NULL);
         break;
 
     case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -462,13 +463,13 @@ void initialize_wifi(void)
     ESP_ERROR_CHECK( esp_wifi_start() );
 }
 
-void app_main(void)
-{
-    IOT_OpenLog("mqtt");
-    IOT_SetLogLevel(IOT_LOG_DEBUG);
+// void app_main(void)
+// {
+//     IOT_OpenLog("mqtt");
+//     IOT_SetLogLevel(IOT_LOG_DEBUG);
 
-    IOT_DumpMemoryStats(IOT_LOG_DEBUG);
+//     IOT_DumpMemoryStats(IOT_LOG_DEBUG);
 
-    initialize_wifi();   
-//   EXAMPLE_TRACE("out of sample!");
-}
+//     initialize_wifi();   
+// //   EXAMPLE_TRACE("out of sample!");
+// }

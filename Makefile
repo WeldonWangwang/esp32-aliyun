@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := main
+PROJECT_NAME := mqtt
 
 COMPONENT_ADD_INCLUDEDIRS := components/esp32-aliyun/platform/os/include
 
