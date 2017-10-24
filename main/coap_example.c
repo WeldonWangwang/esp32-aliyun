@@ -34,7 +34,7 @@
 #include "iot_export.h"
 
 #define TAG "COAP"
-
+#define COAP_DTLS_SUPPORT
 #define IOTX_PRE_DTLS_SERVER_URI "coaps://9AhUIZuwEiy.iot-as-coap.cn-shanghai.aliyuncs.com:5684"
 #define IOTX_PRE_NOSEC_SERVER_URI "coap://9AhUIZuwEiy.iot-as-coap.cn-shanghai.aliyuncs.com:5683"
 

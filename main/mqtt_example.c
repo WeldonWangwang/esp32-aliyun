@@ -405,13 +405,11 @@ do_exit:
 void mqtt_proc(void *pvParameter)
 {
     ESP_LOGI(TAG, "MQTT client example begin");
-#ifndef MQTT_ID2_AUTH
-   mqtt_client();
-#else
-    printf("--------------------------------------------------\n");
-    mqtt_client_secure();
+#ifdef MQTT_ID2_AUTH
+    while (1) {
+        mqtt_client_secure();
+    }
 #endif
-    ESP_LOGI(TAG, "MQTT client example end");
     while (1) {
         mqtt_client();
     }

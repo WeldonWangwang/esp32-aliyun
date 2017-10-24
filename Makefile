@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := mqtt
+PROJECT_NAME := coap
 
 COMPONENT_ADD_INCLUDEDIRS := components/esp32-aliyun/platform/os/include
 

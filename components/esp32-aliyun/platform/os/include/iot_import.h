@@ -305,6 +305,53 @@ int32_t HAL_SSL_Write(uintptr_t handle, const char *buf, int len, int timeout_ms
  */
 int32_t HAL_SSL_Read(uintptr_t handle, char *buf, int len, int timeout_ms);
 
+// typedef struct
+// {
+//     mbedtls_ssl_context          context;
+//     mbedtls_ssl_config           conf;
+//     mbedtls_ctr_drbg_context     ctr_drbg;
+//     mbedtls_entropy_context      entropy;
+// #ifdef MBEDTLS_X509_CRT_PARSE_C
+//     mbedtls_x509_crt             cacert;
+// #endif
+//     mbedtls_net_context          fd;
+//     mbedtls_timing_delay_context timer;
+//     mbedtls_ssl_cookie_ctx       cookie_ctx;
+// } dtls_session_t;
+
+// void *HAL_UDP_create(char *host, unsigned short port);
+
+// void HAL_UDP_close(void *p_socket);
+
+// int HAL_UDP_write(void                        *p_socket,
+//                        const unsigned char    *p_data,
+//                        unsigned int            datalen);
+
+// int HAL_UDP_read(void                   *p_socket,
+//                         unsigned char   *p_data,
+//                         unsigned int     datalen);
+
+// int HAL_UDP_readTimeout( void *p_socket, unsigned char  *p_data,
+//                     unsigned int datalen,     unsigned int timeout);
+
+// int HAL_UDP_resolveAddress(const char *p_host,  char addr[NETWORK_ADDR_LEN]);
+
+// unsigned int HAL_DTLSSession_free(DTLSContext *context);
+
+// unsigned int HAL_DTLSSession_read(DTLSContext *context,
+//                                unsigned char   *p_data,
+//                                unsigned int    *p_datalen,
+//                                unsigned int     timeout);
+
+// unsigned int HAL_DTLSSession_write(DTLSContext *context,
+//                           const unsigned char   *p_data,
+//                                 unsigned int    *p_datalen);
+
+// DTLSContext *HAL_DTLSSession_create(coap_dtls_options_t            *p_options);
+
+// unsigned int _DTLSSession_deinit(dtls_session_t *p_dtls_session);
+
+// dtls_session_t *_DTLSSession_init();
 
 #if defined(__cplusplus)
 }
