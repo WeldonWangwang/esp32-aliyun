@@ -463,13 +463,13 @@ void initialize_wifi(void)
     ESP_ERROR_CHECK( esp_wifi_start() );
 }
 
-// void app_main(void)
-// {
-//     IOT_OpenLog("mqtt");
-//     IOT_SetLogLevel(IOT_LOG_DEBUG);
+void app_main(void)
+{
+    IOT_OpenLog("mqtt");
+    IOT_SetLogLevel(IOT_LOG_DEBUG);
 
-//     IOT_DumpMemoryStats(IOT_LOG_DEBUG);
+    IOT_DumpMemoryStats(IOT_LOG_DEBUG);
 
-//     initialize_wifi();   
-// //   EXAMPLE_TRACE("out of sample!");
-// }
+    initialize_wifi();   
+//   EXAMPLE_TRACE("out of sample!");
+}

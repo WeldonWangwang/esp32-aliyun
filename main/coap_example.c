@@ -21,12 +21,22 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_wifi.h"
+#include "esp_system.h"
+#include "esp_event.h"
+#include "esp_event_loop.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
+
 #include "iot_import.h"
 #include "iot_export.h"
 
+#define TAG "COAP"
 
-#define IOTX_PRE_DTLS_SERVER_URI "coaps://pre.iot-as-coap.cn-shanghai.aliyuncs.com:5684"
-#define IOTX_PRE_NOSEC_SERVER_URI "coap://pre.iot-as-coap.cn-shanghai.aliyuncs.com:5683"
+#define IOTX_PRE_DTLS_SERVER_URI "coaps://9AhUIZuwEiy.iot-as-coap.cn-shanghai.aliyuncs.com:5684"
+#define IOTX_PRE_NOSEC_SERVER_URI "coap://9AhUIZuwEiy.iot-as-coap.cn-shanghai.aliyuncs.com:5683"
 
 #define IOTX_ONLINE_DTLS_SERVER_URL "coaps://%s.iot-as-coap.cn-shanghai.aliyuncs.com:5684"
 
@@ -43,9 +53,9 @@ static void iotx_response_handler(void *arg, void *p_response)
     HAL_Printf("[APPL]: Len: %d, Payload: %s, \r\n", len, p_payload);
 }
 
-#define IOTX_PRODUCT_KEY         "vtkkbrpmxmF"
-#define IOTX_DEVICE_NAME         "IoTxCoAPTestDev"
-#define IOTX_DEVICE_SECRET       "Stk4IUErQUBc1tWRWEKWb5ACra4hFDYF"
+#define IOTX_PRODUCT_KEY         "9AhUIZuwEiy"
+#define IOTX_DEVICE_NAME         "esp32_01"
+#define IOTX_DEVICE_SECRET       "9kbkZ3FILoGewsnva6HdGRz28aJgFCPQ"
 #define IOTX_DEVICE_ID           "IoTxCoAPTestDev.1"
 
 int iotx_set_devinfo(iotx_deviceinfo_t *p_devinfo)
@@ -86,8 +96,7 @@ static void iotx_post_data_to_server(void *param)
     IOT_CoAP_SendMessage(p_ctx, path, &message);
 }
 
-
-void app_main(void)
+void coap_init(void)
 {
     int                     count = 0;
     char                    secur[32] = {0};
@@ -95,11 +104,7 @@ void app_main(void)
     iotx_coap_config_t      config;
     iotx_deviceinfo_t       deviceinfo;
 
-    IOT_OpenLog("coap");
-    IOT_SetLogLevel(IOT_LOG_DEBUG);
-
     HAL_Printf("[COAP-Client]: Enter Coap Client\r\n");
-
 
     memset(&config, 0x00, sizeof(iotx_coap_config_t));
     if (0 == strncmp(env, "pre", strlen("pre"))) {
@@ -127,14 +132,14 @@ void app_main(void)
     p_ctx = IOT_CoAP_Init(&config);
     if (NULL != p_ctx) {
         IOT_CoAP_DeviceNameAuth(p_ctx);
-        do {
+        while (1) {
             count ++;
-            if(count == 11){
-               iotx_post_data_to_server((void *)p_ctx);
-               count = 1;
+            if (count == 11) {
+                iotx_post_data_to_server((void *)p_ctx);
+                count = 1;
             }
             IOT_CoAP_Yield(p_ctx);
-        } while (1);
+        }
 
         IOT_CoAP_Deinit(&p_ctx);
     } else {
@@ -144,3 +149,62 @@ void app_main(void)
     IOT_CloseLog();
 }
 
+void coap_proc(void *pvParameter)
+{
+    ESP_LOGI(TAG, "COAP example begin");
+    while (1) {
+        coap_init();
+    }
+}
+
+esp_err_t event_handler(void *ctx, system_event_t *event)
+{
+    switch (event->event_id)
+    {
+    case SYSTEM_EVENT_STA_START:
+        ESP_LOGI(TAG, "Connecting to AP...");
+        esp_wifi_connect();
+        break;
+
+    case SYSTEM_EVENT_STA_GOT_IP:
+        ESP_LOGI(TAG, "Connected.");
+        xTaskCreate(&coap_proc, "coap_proc", 4096 * 4, NULL, 1, NULL);
+        break;
+
+    case SYSTEM_EVENT_STA_DISCONNECTED:
+        ESP_LOGI(TAG, "Wifi disconnected, try to connect ...");
+        esp_wifi_connect();
+        break;
+
+    default:
+        break;
+    }
+
+    return ESP_OK;
+}
+
+void initialize_wifi(void)
+{
+    tcpip_adapter_init();
+    ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
+    wifi_config_t sta_config = {
+        .sta = {
+            .ssid = CONFIG_WIFI_SSID,
+            .password = CONFIG_WIFI_PASSWORD,
+            .bssid_set = false
+        }
+    };
+
+    ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, &sta_config) );
+    ESP_ERROR_CHECK( esp_wifi_start() );
+}
+
+// void app_main(void)
+// {
+//     IOT_OpenLog("coap");
+//     IOT_SetLogLevel(IOT_LOG_DEBUG);
+//     initialize_wifi();
+// }

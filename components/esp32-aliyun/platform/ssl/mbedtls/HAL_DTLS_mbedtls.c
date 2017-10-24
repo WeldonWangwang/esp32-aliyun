@@ -23,7 +23,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "iot_import_dtls.h"
-#ifdef COAP_DTLS_SUPPORT
+
+
+//#ifdef COAP_DTLS_SUPPORT
 #include "mbedtls/ssl.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/sha256.h"
@@ -369,4 +371,4 @@ unsigned int HAL_DTLSSession_free(DTLSContext *context)
 }
 
 
-#endif
+//#endif
