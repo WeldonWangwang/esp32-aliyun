@@ -1,0 +1,3 @@
+[submodule "components/esp32-aliyun/iotkit-embedded"]
+	path = components/esp32-aliyun/iotkit-embedded
+	url = https://github.com/aliyun/iotkit-embedded.git
