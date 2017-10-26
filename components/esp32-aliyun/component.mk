@@ -8,6 +8,7 @@ COMPONENT_SRCDIRS := platform/os/esp32 iotkit-embedded/src/tfs iotkit-embedded/s
 
 CFLAGS += -D IOTX_DEBUG
 
+# choose the way to establish MQTT connection
 CFLAGS += -D MQTT_DIRECT
 
 CFLAGS += -D MQTT_COMM_ENABLED
