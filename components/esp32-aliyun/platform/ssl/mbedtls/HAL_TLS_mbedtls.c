@@ -32,6 +32,8 @@
 
 #include "iot_import.h"
 
+#undef MBEDTLS_DEBUG_C
+
 typedef struct _TLSDataParams {
     mbedtls_ssl_context ssl;          /**< mbed TLS control context. */
     mbedtls_net_context fd;           /**< mbed TLS network context. */
@@ -226,8 +228,8 @@ int utils_network_ssl_read(TLSDataParams_t *pTlsData, char *buffer, int len, int
     mbedtls_ssl_conf_read_timeout(&(pTlsData->conf), timeout_ms);
     while (readLen < len) {
         ret = mbedtls_ssl_read(&(pTlsData->ssl), (unsigned char *)(buffer + readLen), (len - readLen));
-        printf("~~~~~~~~~~~~~~~~~~~~~~~~ ret = %d ~~~~~~~~~~~~~~~~~~~~~~~~\n", ret);
-        //vTaskDelay(20 / portTICK_PERIOD_MS);   // use printf or delay here.
+        //printf("~~~~~~~~~~~~~~~~~~~~~~~~ ret = %d ~~~~~~~~~~~~~~~~~~~~~~~~\n", ret);
+        vTaskDelay(20 / portTICK_PERIOD_MS);   // use printf or delay here.
         if (ret > 0) {
             readLen += ret;
             net_status = 0;

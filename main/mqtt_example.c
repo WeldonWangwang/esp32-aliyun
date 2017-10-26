@@ -1,3 +1,4 @@
+#ifdef mqtt_example
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,6 +40,8 @@
 
 #define IOTX_DEBUG
 #define MSG_LEN_MAX             (1024)
+
+bool wifi_connected = 0;
 
 #define EXAMPLE_TRACE(fmt, args...)  \
     do { \
@@ -216,40 +219,42 @@ int mqtt_client(void)
     EXAMPLE_TRACE("rc = IOT_MQTT_Publish() = %d", rc);
 
     while (1) {
+        if (wifi_connected == 1) {
+            uint32_t w;
+            w = esp_get_free_heap_size();
+            printf("\n************************     %d     **********************\n", w);
+            /* Generate topic message */
 
-        uint32_t w;
-        w = esp_get_free_heap_size();
-        printf("\n************************     %d     **********************\n", w);
-        /* Generate topic message */
+            msg_len = snprintf(msg_pub, sizeof(msg_pub), "{\"attr_name\":\"temperature\", \"attr_value\":\"%d\"}", cnt);
+            if (msg_len < 0) {
 
-        msg_len = snprintf(msg_pub, sizeof(msg_pub), "{\"attr_name\":\"temperature\", \"attr_value\":\"%d\"}", cnt);
-        if (msg_len < 0) {
-            
-            EXAMPLE_TRACE("Error occur! Exit program");
-            rc = -1;
+                EXAMPLE_TRACE("Error occur! Exit program");
+                rc = -1;
+                break;
+            }
+
+            topic_msg.payload = (void *)msg_pub;
+            topic_msg.payload_len = msg_len;
+
+            rc = IOT_MQTT_Publish(pclient, TOPIC_DATA, &topic_msg);
+            if (rc < 0) {
+                EXAMPLE_TRACE("error occur when publish");
+                rc = -1;
+                break;
+            }
+            /* handle the MQTT packet received from TCP or SSL connection */
+            IOT_MQTT_Yield(pclient, 200);
+            HAL_SleepMs(2000);
+
+        } else {
+            vTaskDelete(NULL);
             break;
         }
-
-        topic_msg.payload = (void *)msg_pub;
-        topic_msg.payload_len = msg_len;
-
-        rc = IOT_MQTT_Publish(pclient, TOPIC_DATA, &topic_msg);
-        if (rc < 0) {
-            EXAMPLE_TRACE("error occur when publish");
-            rc = -1;
-            break;
-        }
-
-//        HAL_SleepMs(200);
-        /* handle the MQTT packet received from TCP or SSL connection */
-        IOT_MQTT_Yield(pclient, 200);
-        HAL_SleepMs(2000);
     }
 
     IOT_MQTT_Unsubscribe(pclient, TOPIC_DATA);
-    
-    HAL_SleepMs(2000);
 
+    HAL_SleepMs(2000);
     IOT_MQTT_Destroy(&pclient);
 
 do_exit:
@@ -406,11 +411,11 @@ void mqtt_proc(void *pvParameter)
 {
     ESP_LOGI(TAG, "MQTT client example begin");
 #ifdef MQTT_ID2_AUTH
-    while (1) {
+    while (wifi_connected) {
         mqtt_client_secure();
     }
 #endif
-    while (1) {
+    while (wifi_connected) {
         mqtt_client();
     }
 }
@@ -418,6 +423,7 @@ void mqtt_proc(void *pvParameter)
 
 esp_err_t event_handler(void *ctx, system_event_t *event)
 {
+    int task_flag = 0;
     switch (event->event_id)
     {
     case SYSTEM_EVENT_STA_START:
@@ -428,11 +434,13 @@ esp_err_t event_handler(void *ctx, system_event_t *event)
     case SYSTEM_EVENT_STA_GOT_IP:
         ESP_LOGI(TAG, "Connected.");
         xTaskCreate(&mqtt_proc, "mqtt_proc", 4096 * 4, NULL, 2, NULL);
+        wifi_connected = 1;
         break;
 
     case SYSTEM_EVENT_STA_DISCONNECTED:
         ESP_LOGI(TAG, "Wifi disconnected, try to connect ...");
         esp_wifi_connect();
+        wifi_connected = 0;
         break;
 
     default:
@@ -474,6 +482,8 @@ void app_main(void)
 
     IOT_DumpMemoryStats(IOT_LOG_DEBUG);
 
-    initialize_wifi();   
+    initialize_wifi();
 //   EXAMPLE_TRACE("out of sample!");
 }
+
+#endif

@@ -3,7 +3,13 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := coap
+PROJECT_NAME := main
+
+# To use diferent example, uncomment the following line:
+
+CFLAGS += -D mqtt_example
+
+CFLAGS += -D ota_mqtt_example
 
 COMPONENT_ADD_INCLUDEDIRS := components/esp32-aliyun/platform/os/include
 
