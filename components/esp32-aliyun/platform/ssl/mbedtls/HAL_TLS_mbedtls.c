@@ -229,7 +229,7 @@ int utils_network_ssl_read(TLSDataParams_t *pTlsData, char *buffer, int len, int
     while (readLen < len) {
         ret = mbedtls_ssl_read(&(pTlsData->ssl), (unsigned char *)(buffer + readLen), (len - readLen));
         //printf("~~~~~~~~~~~~~~~~~~~~~~~~ ret = %d ~~~~~~~~~~~~~~~~~~~~~~~~\n", ret);
-        vTaskDelay(20 / portTICK_PERIOD_MS);   // use printf or delay here.
+        vTaskDelay(10 / portTICK_PERIOD_MS);   // use printf or delay here.
         if (ret > 0) {
             readLen += ret;
             net_status = 0;

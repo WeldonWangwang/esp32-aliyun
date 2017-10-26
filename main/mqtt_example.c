@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <time.h>
+#include <sys/time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_wifi.h"
@@ -144,26 +145,22 @@ int mqtt_client(void)
     iotx_mqtt_topic_info_t topic_msg;
     char msg_pub[128];
     char *msg_buf = NULL, *msg_readbuf = NULL;
-
     if (NULL == (msg_buf = (char *)HAL_Malloc(MSG_LEN_MAX))) {
         EXAMPLE_TRACE("not enough memory");
         rc = -1;
         goto do_exit;
     }
-
     if (NULL == (msg_readbuf = (char *)HAL_Malloc(MSG_LEN_MAX))) {
         EXAMPLE_TRACE("not enough memory");
         rc = -1;
         goto do_exit;
     }
-
     /* Device AUTH */
     if (0 != IOT_SetupConnInfo(PRODUCT_KEY, DEVICE_NAME, DEVICE_SECRET, (void **)&pconn_info)) {
         EXAMPLE_TRACE("AUTH request failed!");
         rc = -1;
         goto do_exit;
     }
-
     /* Initialize MQTT parameter */
     memset(&mqtt_params, 0x0, sizeof(mqtt_params));
 
@@ -193,7 +190,6 @@ int mqtt_client(void)
         rc = -1;
         goto do_exit;
     }
-
     /* Subscribe the specific topic */
     rc = IOT_MQTT_Subscribe(pclient, TOPIC_DATA, IOTX_MQTT_QOS1, _demo_message_arrive, NULL);
     if (rc < 0) {
@@ -204,7 +200,6 @@ int mqtt_client(void)
     }
 
     HAL_SleepMs(1000);
-
     /* Initialize topic information */
     memset(&topic_msg, 0x0, sizeof(iotx_mqtt_topic_info_t));
     strcpy(msg_pub, "message: hello! start!");
@@ -217,12 +212,9 @@ int mqtt_client(void)
 
     rc = IOT_MQTT_Publish(pclient, TOPIC_DATA, &topic_msg);
     EXAMPLE_TRACE("rc = IOT_MQTT_Publish() = %d", rc);
-
     while (1) {
-        if (wifi_connected == 1) {
-            uint32_t w;
-            w = esp_get_free_heap_size();
-            printf("\n************************     %d     **********************\n", w);
+        if (wifi_connected) {
+            printf("\n************************     %d     **********************\n", esp_get_free_heap_size());
             /* Generate topic message */
 
             msg_len = snprintf(msg_pub, sizeof(msg_pub), "{\"attr_name\":\"temperature\", \"attr_value\":\"%d\"}", cnt);
@@ -247,13 +239,17 @@ int mqtt_client(void)
             HAL_SleepMs(2000);
 
         } else {
+
+            IOT_MQTT_Unsubscribe(pclient, TOPIC_DATA);
+            IOT_MQTT_Destroy(&pclient);
+            HAL_Free(msg_buf);
+            HAL_Free(msg_readbuf);
             vTaskDelete(NULL);
             break;
         }
     }
 
     IOT_MQTT_Unsubscribe(pclient, TOPIC_DATA);
-
     HAL_SleepMs(2000);
     IOT_MQTT_Destroy(&pclient);
 
@@ -265,7 +261,6 @@ do_exit:
     if (NULL != msg_readbuf) {
         HAL_Free(msg_readbuf);
     }
-
     return rc;
 }
 
@@ -279,7 +274,6 @@ int mqtt_client_secure()
     iotx_mqtt_topic_info_t topic_msg;
     char msg_pub[128];
     char *msg_buf = NULL, *msg_readbuf = NULL;
-
     if (NULL == (msg_buf = (char *)HAL_Malloc(MSG_LEN_MAX))) {
         EXAMPLE_TRACE("not enough memory");
         rc = -1;
@@ -291,14 +285,12 @@ int mqtt_client_secure()
         rc = -1;
         goto do_exit;
     }
-
     /* Device AUTH */
     rc = IOT_SetupConnInfoSecure(PRODUCT_KEY, DEVICE_NAME, DEVICE_SECRET, (void **)&pconn_info);
     if (rc != 0) {
         EXAMPLE_TRACE("AUTH request failed!");
         goto do_exit;
     }
-
     /* Initialize MQTT parameter */
     memset(&mqtt_params, 0x0, sizeof(mqtt_params));
 
@@ -327,7 +319,6 @@ int mqtt_client_secure()
         rc = -1;
         goto do_exit;
     }
-
     /* Subscribe the specific topic */
     rc = IOT_MQTT_Subscribe(pclient, TOPIC_DATA, IOTX_MQTT_QOS1, _demo_message_arrive, NULL);
     if (rc < 0) {
@@ -336,7 +327,6 @@ int mqtt_client_secure()
         rc = -1;
         goto do_exit;
     }
-
     HAL_SleepMs(1000);
 
     /* Initialize topic information */
@@ -351,43 +341,48 @@ int mqtt_client_secure()
 
     rc = IOT_MQTT_Publish(pclient, TOPIC_DATA, &topic_msg);
     EXAMPLE_TRACE("rc = IOT_MQTT_Publish() = %d", rc);
-
     while (1) {
-        /* Generate topic message */
-        cnt++;
-        msg_len = snprintf(msg_pub, sizeof(msg_pub), "{\"attr_name\":\"temperature\", \"attr_value\":\"%d\"}", cnt);
-        if (msg_len < 0) {
-            EXAMPLE_TRACE("Error occur! Exit program");
-            rc = -1;
+        if (wifi_connected) {
+            /* Generate topic message */
+            cnt++;
+            msg_len = snprintf(msg_pub, sizeof(msg_pub), "{\"attr_name\":\"temperature\", \"attr_value\":\"%d\"}", cnt);
+            if (msg_len < 0) {
+                EXAMPLE_TRACE("Error occur! Exit program");
+                rc = -1;
+                break;
+            }
+
+            topic_msg.payload = (void *)msg_pub;
+            topic_msg.payload_len = msg_len;
+
+            rc = IOT_MQTT_Publish(pclient, TOPIC_DATA, &topic_msg);
+            if (rc < 0) {
+                EXAMPLE_TRACE("error occur when publish");
+                rc = -1;
+                break;
+            }
+            EXAMPLE_TRACE("packet-id=%u, publish topic msg='0x%02x%02x%02x%02x'...",
+                          (uint32_t)rc,
+                          msg_pub[0], msg_pub[1], msg_pub[2], msg_pub[3]
+                         );
+
+            /* handle the MQTT packet received from TCP or SSL connection */
+            IOT_MQTT_Yield(pclient, 200);
+
+            /* infinite loop if running with 'loop' argument */
+
+            HAL_SleepMs(1000);
+        } else {
+            IOT_MQTT_Unsubscribe(pclient, TOPIC_DATA);
+            IOT_MQTT_Destroy(&pclient);
+            HAL_Free(msg_buf);
+            HAL_Free(msg_readbuf);
+            vTaskDelete(NULL);
             break;
         }
-
-        topic_msg.payload = (void *)msg_pub;
-        topic_msg.payload_len = msg_len;
-
-        rc = IOT_MQTT_Publish(pclient, TOPIC_DATA, &topic_msg);
-        if (rc < 0) {
-            EXAMPLE_TRACE("error occur when publish");
-            rc = -1;
-            break;
-        }
-        EXAMPLE_TRACE("packet-id=%u, publish topic msg='0x%02x%02x%02x%02x'...",
-                      (uint32_t)rc,
-                      msg_pub[0], msg_pub[1], msg_pub[2], msg_pub[3]
-                     );
-
-        /* handle the MQTT packet received from TCP or SSL connection */
-        IOT_MQTT_Yield(pclient, 200);
-
-        /* infinite loop if running with 'loop' argument */
-
-        HAL_SleepMs(1000);
-
-
     }
 
     IOT_MQTT_Unsubscribe(pclient, TOPIC_DATA);
-
     HAL_SleepMs(200);
     IOT_CloseLog();
     IOT_MQTT_Destroy(&pclient);
@@ -400,12 +395,10 @@ do_exit:
     if (NULL != msg_readbuf) {
         HAL_Free(msg_readbuf);
     }
-
     return rc;
 
 }
 #endif
-
 
 void mqtt_proc(void *pvParameter)
 {
@@ -420,10 +413,8 @@ void mqtt_proc(void *pvParameter)
     }
 }
 
-
 esp_err_t event_handler(void *ctx, system_event_t *event)
 {
-    int task_flag = 0;
     switch (event->event_id)
     {
     case SYSTEM_EVENT_STA_START:
@@ -433,7 +424,7 @@ esp_err_t event_handler(void *ctx, system_event_t *event)
 
     case SYSTEM_EVENT_STA_GOT_IP:
         ESP_LOGI(TAG, "Connected.");
-        xTaskCreate(&mqtt_proc, "mqtt_proc", 4096 * 4, NULL, 2, NULL);
+        xTaskCreate(&mqtt_proc, "mqtt_proc", 4096 * 2, NULL, 2, NULL);
         wifi_connected = 1;
         break;
 

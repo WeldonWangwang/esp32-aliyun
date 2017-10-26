@@ -8,6 +8,8 @@ COMPONENT_SRCDIRS := platform/os/esp32 iotkit-embedded/src/tfs iotkit-embedded/s
 
 CFLAGS += -D IOTX_DEBUG
 
+CFLAGS += -D MQTT_DIRECT
+
 CFLAGS += -D MQTT_COMM_ENABLED
 
 CFLAGS += -D OTA_SIGNAL_CHANNEL=1
