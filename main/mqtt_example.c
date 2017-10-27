@@ -128,7 +128,7 @@ int mqtt_client(void)
     /* this arry can store the sucessful publish number */
     int PUBLISH_SUC_NUM[4] = {0, 0, 0, 2};
     /* use this variable to choose which arry element to store publish number */
-    uint16_t BOOLFLAG = 0;
+    uint16_t LOOPFLAG = 0;
     int rc = 0, msg_len, cnt = 0;
     void *pclient;
     iotx_conn_info_pt pconn_info;
@@ -204,14 +204,14 @@ int mqtt_client(void)
     EXAMPLE_TRACE("rc = IOT_MQTT_Publish() = %d", rc);
     while (1) {
         if (wifi_connected) {
-            printf("\n************************     %d    success num %d **********************\n", esp_get_free_heap_size(), success_num);
+            printf("\n************************     %d    **********************\n", esp_get_free_heap_size(), success_num);
             /* check the net if occur problem */
-            PUBLISH_SUC_NUM[BOOLFLAG] = success_num;
-            BOOLFLAG++;
-            if (BOOLFLAG == 4)
-                BOOLFLAG = 0;
+            PUBLISH_SUC_NUM[LOOPFLAG] = success_num;
+            LOOPFLAG++;
+            if (LOOPFLAG == 4)
+                LOOPFLAG = 0;
             if (PUBLISH_SUC_NUM[0] == PUBLISH_SUC_NUM[3]) {
-                EXAMPLE_TRACE("The net occur some problem, please the router/AP!\n");
+                EXAMPLE_TRACE("The net occur some problem, please check the router/AP!\n");
                 break;
             }
             msg_len = snprintf(msg_pub, sizeof(msg_pub), "{\"attr_name\":\"temperature\", \"attr_value\":\"%d\"}", cnt);

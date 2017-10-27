@@ -1,4 +1,4 @@
-﻿# esp32-aliyun  
+# esp32-aliyun-demo  
 
 ## 1. 阿里云物联网套件简介
 
@@ -9,7 +9,7 @@
 > - IoT Hub  
 
 >  为设备和物联网应用程序提供发布和接收消息的安全通道。IoT Hub 目前支持 CoAP 协议和 MQTT 协议：
- >  - 设备可以基于 CoAP 协议与 IoT HUb 短连接通信，应用设备低功耗场景。
+>  - 设备可以基于 CoAP 协议与 IoT HUb 短连接通信，应用设备低功耗场景。
   - 设备也可以基于 MQTT 协议与 IoT Hub 长连接通信，应用指令实时响应的场景。  
   
 >   详情请参考 [IoT Hub](https://help.aliyun.com/document_detail/30548.html?spm=5176.doc30523.2.1.WtHk0t)
@@ -26,30 +26,32 @@ ESP32_aliyun_IoT-SDK 移植下载:
 ## 2. framework  
 
 ```
-.
+esp32-aliyun-demo
 ├── build                                   //存放编译后生成的文件
 ├── components                              //核心移植组件
 │   └── esp32-aliyun                        //esp32-aliyun submodule
 │       ├── component.mk                    //makefile 文件
-│       ├── IoT-SDK_V2.0                    //阿里物联网套件 IoT-SDK_V2.0
+│       ├── iotkit-embedded                 //阿里物联网套件
 │       ├── platform                        //ESP32 适配平台，HAL 接口实现
 │       │   ├── os
 │       │   │   ├── esp32                
-│       │   │   │   ├── HAL_OS_esp32.c      //OS 相关
+│       │   │   │   ├── HAL_OS_esp32.c      //ESP32平台相关
 │       │   │   │   └── HAL_TCP_esp32.c     //tcp 相关
 │       │   │   └── include                 //所有被提供的函数的声明
 │       │   │       ├── iot_export.h
 │       │   │       └── iot_import.h
 │       │   └── ssl
 │       │       └── mbedtls                 
-│       │           └── HAL_TLS_mbedtls.c
+│       │           └── HAL_TLS_mbedtls.c   //TLS实现
 │       └── README.md
 ├── main                                    //demo main 文件夹     
 │   ├── component.mk
 │   ├── Kconfig.projbuild                   //menuconfig 用户配置文件
 │   └── main.c                              //入口文件
 ├── Makefile                                //编译入口 makefile
-└──  README.md
+├── sdkconfig                               //保存配置选项文件
+├── set_env.sh                              //一键搭建编译环境脚本(linux)
+└── README.md
 
 ```
 ## 3. 硬件平台  
@@ -60,49 +62,65 @@ ESP32_aliyun_IoT-SDK 移植下载:
 
 ## 4. 编译环境搭建( ubuntu 16.04)  
 
-#### 主要是 esp-idf 编译环境搭建
+如果是在 ubuntu x64 下进行开发，则只需要在 PC 有网络连接时运行 `set_env.sh` 脚本一键完成编译环境的搭建。 
 
-具体请参考 [Get Started](esp-idf.readthedocs.io/en/latest/get-started.html) 
+如果是在其他平台下进行开发，具体请参考 [Get Started](http://esp-idf.readthedocs.io/en/latest/get-started/index.html).
 
 ## 5. 配置  
 
-#### IoT-SDK 改动适配  
-
-- 为了提高在 WiFi 连接下传输的稳定性，需要做以下改动：  
-
-    将 `IoT-SDK/src/mqtt/mqtt_client.h` 中 `#define IOTX_MC_REPUB_NUM_MAX                   (20)` 改为 `#define IOTX_MC_REPUB_NUM_MAX                   (100)`
-    
-    将`IoT-SDK/src/security.h` 中 `#include "tfs/tfs.h"` 改为 `#include "tfs.h"`  
+#### 1) 编译配置项说明  
 
 - demo 选择：  
-在 `esp32-aliyun` 中有不同的 demo 可以选择编译，默认为 `mqtt-example`;
+打开 `Makefile` 进行配置，在 `esp32-aliyun-demo` 中有不同的 demo 可以选择编译，默认为 `mqtt-example`;
 在 `esp32-aliyun` 中 `main` 文件夹下有不同的 demo，选择对所需的 demo 中 `app_main` 对应的注释即可。
 
-#### ESP32 Wi-Fi 联网配置  
+        # To use different example, uunmount the appropriate CFLAGS
+        CFLAGS += -D mqtt_example
+        # CFLAGS += -D ota_mqtt_example  
+- 编辑连接配置项  
+打开 `esp32-aliyun/component.mk`, 
 
-运行 `make menuconfig -> Demo Configuration -> 输入热点的 Wi-Fi SSID & Wi-Fi Password`
+        CFLAGS += -D IOTX_DEBUG
+        CFLAGS += -D MQTT_DIRECT
+        CFLAGS += -D MQTT_COMM_ENABLED
+        CFLAGS += -D OTA_SIGNAL_CHANNEL=1
+        CFLAGS += -D COAP_DTLS_SUPPORT
 
+|配置选项          |含义             |
+|:----------------:|:---------------:|
+|IOTX_DEBUG        |指定编译 SDK 的版本类型, 支持 `debug`, `release`|
+|MQTT_DIRECT       |是否用 MQTT 直连模式代替 HTTPS 三方认证模式做设备认证|
+|MQTT_COMM_ENABLED |是否使能 MQTT 通道功能的总开关|
+|OTA_SIGNAL_CHANNEL|可以选择 MQTT 或 COAP 作为 OTA 的通道|
+|COAP_DTLS_SUPPORT |在使用 COAP 时是否关闭 DTLS|
+
+#### 2) ESP32 Wi-Fi 联网配置  
+
+运行 `make menuconfig` -> Demo Configuration -> 输入热点的 Wi-Fi SSID & Wi-Fi Password  
+
+![](https://i.imgur.com/UOA8dm4.png)
 #### 阿里云物联网套件控制台中创建设备  
-**1) 在制台中创建设备**
+
+- 在制台中创建设备
 
  登录[IoT 控制台](http://iot.console.aliyun.com), 创建产品及在产品下创建设备和 Topic 类, 具体步骤如下:
 
-- 创建产品, 可得 `ProductKey`, `ProductSecret` (*华东2站点无`ProductSecret`*)
-- 在产品下创建设备, 可得 `DeviceName`, `DeviceSecret`
-- 定义 Topic: `$(PRODUCT_KEY)/$(DEVICE_NAME)/data`, 并设置权限为: 设备具有发布与订阅 **(此步骤非常重要)**
+ - 创建产品, 可得 `ProductKey`, `ProductSecret` (*华东2站点无`ProductSecret`*)
+ - 在产品下创建设备, 可得 `DeviceName`, `DeviceSecret`
+ - 定义 Topic: `$(PRODUCT_KEY)/$(DEVICE_NAME)/data`, 并设置权限为: 设备具有发布与订阅 **(此步骤非常重要)**
 
-> **注意:** 请根据所选站点 (华东 2, 杭州) 创建相应的产品与设备.
+ > **注意:** 请根据所选站点 (华东 2, 杭州) 创建相应的产品与设备.
 
-具体请参考[控制台使用手册](https://help.aliyun.com/document_detail/42714.html)文档中的`创建产品`, `添加设备`以及`获取设备 Topic`部分.
+ 具体请参考[控制台使用手册](https://help.aliyun.com/document_detail/42714.html)文档中的`创建产品`, `添加设备`以及`获取设备 Topic`部分.
 
-**2) 填充设备参数**
+- 填充设备参数
 
-将`main/main.c`程序文件中的设备参数替换为您在控制台申请到的设备参数.
+ 将`main/main.c`程序文件中的设备参数替换为您在控制台申请到的设备参数.
 
-    // TODO: 在以下段落替换下列宏定义为你在IoT控制台申请到的设备信息
-    #define PRODUCT_KEY             "*******************"
-    #define DEVICE_NAME             "*******************"
-    #define DEVICE_SECRET           "*******************"
+        // TODO: 在以下段落替换下列宏定义为你在IoT控制台申请到的设备信息
+        #define PRODUCT_KEY             "*******************"
+        #define DEVICE_NAME             "*******************"
+        #define DEVICE_SECRET           "*******************"
 
 ## 6. 编译运行
 
@@ -113,17 +131,17 @@ ESP32_aliyun_IoT-SDK 移植下载:
 
 编译成功后, 开始进行烧写。  
 样例程序的基本逻辑流程为:
-
-1. 创建一个MQTT客户端
-2. 订阅主题 `$(PRODUCT_KEY)/$(DEVICE_NAME)/data`
-3. 循环向该主题发布消息
+> 1. ESP32 联网
+> 2. 创建一个MQTT客户端
+> 3. 订阅主题 `$(PRODUCT_KEY)/$(DEVICE_NAME)/data`
+> 4. 循环向该主题发布消息
 
 ![](pictures/Selection_014.png)  
 
 运行后打印输出：  
 
 ```
-wangwangwang@wangwang:~/workspace/esp32-aliyun$ make flash monitor
+esp@esp:~/workspace/esp32-aliyun$ make flash monitor
 Flashing binaries to serial port /dev/ttyUSB0 (app at offset 0x10000)...
 esptool.py v2.1
 Connecting.....
@@ -206,7 +224,5 @@ key usage         : Key Cert Sign, CRL Sign
 [dbg] iotx_mc_connect(2263): start MQTT connection with parameters: clientid=9AhUIZuwEiy.esp32_01|securemode=-1,timestamp=2524608000000,signmethod=hmacsha1,gw=0|, username=wiunMmUYWebSJgayWwQx0010bad000, password=b94fdc7929a744ffa1145a18517424e1
 [inf] iotx_mc_connect(2283): mqtt connect success!
 ```
-
-
 
 
